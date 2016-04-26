@@ -3,27 +3,26 @@
 # turtl.it unofficial API Dockerfile
 #
 
-FROM nfnty/arch-mini:latest
-MAINTAINER clma <claus@crate.io>
+FROM alpine:edge
+MAINTAINER Huy Doan <me@huy.im>
 
 RUN mkdir /quicklisp /data
 
-RUN pacman -Sy sbcl git libuv gcc --noconfirm
-RUN curl -O https://beta.quicklisp.org/quicklisp.lisp && sbcl --load quicklisp.lisp <<< $'(quicklisp-quickstart:install :path "/quicklisp/")'
+RUN apk add --update --repository http://dl-3.alpinelinux.org/alpine/edge/testing/ --allow-untrusted sbcl libuv git && rm -rf /var/cache/apk/*
 
-RUN git clone https://github.com/turtl/api.git --depth 1 /turtl
+RUN wget -qO/tmp/quicklisp.lisp http://beta.quicklisp.org/quicklisp.lisp
+RUN echo "(quicklisp-quickstart:install :path \"/quicklisp/\")" | sbcl --load /tmp/quicklisp.lisp
+RUN rm /tmp/quicklisp.lisp
 
-RUN echo $'(load "/quicklisp/setup.lisp")\n(push #p"/turtl/" asdf:*central-registry*)\n(load "start")' > /turtl/cmd.args
+RUN git clone --depth=1 https://github.com/turtl/api.git /turtl
+
+RUN echo '(load "/quicklisp/setup.lisp")\n(push #p"/turtl/" asdf:*central-registry*)\n(load "start")' > /turtl/cmd.args
 RUN echo '/usr/bin/sbcl < /turtl/cmd.args' > /turtl/run.sh
 
 VOLUME ["/turtl/config", "/data"]
-
-# auto link default config (?)
-#ADD /turtl/config/config.default.lisp /turtl/config/config.lisp
-
 
 WORKDIR /turtl
 
 EXPOSE 8181
 
-CMD ["/usr/bin/bash" , "/turtl/run.sh"]
+CMD ["/bin/ash" , "/turtl/run.sh"]
